@@ -1,72 +1,36 @@
-import {
-  useEffect,
-  useState,
-  useContext,
-  createContext,
-  FunctionComponent,
-} from "react";
-import { useRouter } from "next/router";
+import { FunctionComponent, useState, useEffect } from "react";
+import StyledFirebaseAuth from "react-firebaseui/StyledFirebaseAuth";
 import firebase from "firebase/app";
 import "firebase/auth";
-import initFirebase from "./initFirebase";
-import { removeTokenCookie, setTokenCookie } from "./tokenCookies";
 
-initFirebase();
+const firebaseAuthConfig = {
+  signInFlow: "popup",
+  signInOptions: [
+    {
+      provider: firebase.auth.EmailAuthProvider.PROVIDER_ID,
+      requireDisplayName: false,
+    },
+  ],
+  signInSuccessUrl: "/",
+};
 
-interface IAuthContext {
-  user: firebase.User | null;
-  logout: () => void;
-  authenticated: boolean;
-}
-
-const AuthContext = createContext<IAuthContext>({
-  user: null,
-  logout: () => null,
-  authenticated: false,
-});
-
-export const AuthProvider: FunctionComponent = ({ children }) => {
-  const [user, setUser] = useState<firebase.User | null>(null);
-  const router = useRouter();
-
-  const logout = () => {
-    firebase
-      .auth()
-      .signOut()
-      .then(() => {
-        router.push("/");
-      })
-      .catch((e) => {
-        console.error(e);
-      });
-  };
+const FirebaseAuth: FunctionComponent = () => {
+  const [renderAuth, setRenderAuth] = useState(false);
 
   useEffect(() => {
-    const cancelAuthListener = firebase
-      .auth()
-      .onIdTokenChanged(async (user) => {
-        if (user) {
-          const token = await user.getIdToken();
-          setTokenCookie(token);
-          setUser(user);
-        } else {
-          removeTokenCookie();
-          setUser(null);
-        }
-      });
-
-    return () => {
-      cancelAuthListener();
-    };
+    setRenderAuth(true);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, logout, authenticated: !!user }}>
-      {children}
-    </AuthContext.Provider>
+    <div className="mt-16">
+      {renderAuth ? (
+        <StyledFirebaseAuth
+          uiConfig={firebaseAuthConfig}
+          firebaseAuth={firebase.auth()}
+        />
+      ) : null}
+    </div>
   );
 };
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export default FirebaseAuth;
